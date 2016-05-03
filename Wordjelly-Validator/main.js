@@ -43,26 +43,85 @@ should_equal: id_of_other_element
 ****/
 function WJ_Validator(args){
 	this.args = args;
-	this.valid_ids = {};
+	
+
+	/****
+	defaults for field definitions.
+	****/
+	this.validation_event_defaults = {
+		"focus_change" : false,
+		"keypress" :  false
+	};
+
+	this.validate_with_defaults = {
+
+	};
+	this.on_success_defaults = {
+
+	};
+
+	this.on_failure_defaults = this.on_success_defaults;
+
+	this.do_before_validating_defaults = {
+		
+	};
+
+	this.do_after_validating_defaults = {
+
+	};
+
+	this.field_defaults = {
+		"validation_event" : this.validation_event_defaults,
+		"validate_with" : this.validate_with_defaults,
+		"on_success": this.on_success_defaults,
+		"on_failure": this.on_failure_defaults,
+		"do_before_validating" : this.do_before_validating_defaults,
+		"do_after_validating" : this.do_after_validating_defaults
+	};
+	/***
+	defaults end
+	***/
+
 }
 
-prototype.WJ_Validator = function(){
+WJ_Validator.prototype = {
 	constructor: WJ_Validator,
 	register_handlers: function(){
 		var focus_change_fields = [];
 		var keypress_fields = [];
-		_.each(Object.keys(this.args),function(form_id){
-			var form = $("#" + form_id);
-			_.each(Object.keys(this.args[form_id]),function(field_id){
-				var field = $("#" + field_id);
-				if(field["validation_event"] == "focus_change"){
+		var _this = this;
+		_.each(Object.keys(_this.args),function(fo){
+			
+			/***
+			the form hash.
+			***/
+			var form_obj = _this.args[fo];
+
+			_.each(Object.keys(_this.args[fo]),function(f){
+				
+				/***
+				the id of the field.
+				***/	
+				var field_id = "#" + f;
+
+				/***
+				merge the defaults with the incoming field definition.
+				use jquery extend.
+				***/
+			
+				var field_obj = $.extend(true,{},_this.field_defaults,form_obj[f]);
+
+				if(field_obj["validation_event"]["focus_change"]){
 					focus_change_fields.push(field_id);
 				}
-				else if(field["validation_event"] == "keypress"){
+
+				if(field_obj["validation_event"]["keypress"]){
 					keypress_fields.push(field_id);
 				}
+
 			});
 		});
+
 		focus_change_fields = focus_change_fields.join(",");
 		keypress_fields = keypress_fields.join(",");
 
@@ -78,20 +137,6 @@ prototype.WJ_Validator = function(){
 	passes in click event.
 	***/
 	validate: function(e){
-		var form = $("#" + e.target.id).closest("form");
-		var field_definition = this.args[form.id][e.target.id];
-
-		/***
-		do before validate
-		check if function or array.
-		***/
-		if("do_before_validating" in field_definition){
-			if($.isFunction(field_definition["do_before_validating"])){
-				field_definition["do_before_validating"];
-			}
-			else{
-
-			}
-		}
+		
 	}
 }
