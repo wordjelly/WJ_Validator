@@ -4,7 +4,7 @@ $(document).on("ready",function(){
 	var on_success = function(){
 		alert("success");
 	};
-	var on_failure = function(){
+	var on_failure = function(validator_name,validator_arg){
 		alert("failure");
 	}
 	var args = {
@@ -17,12 +17,8 @@ $(document).on("ready",function(){
 					"format":"email",
 					"required":true
 				},
-				"on_success":{
-					"function": on_success
-				},
-				"on_failure":{
-					"function": on_failure
-				}
+				"on_success": on_success,
+				"on_failure": on_failure
 			},
 			"password":{
 

@@ -6,8 +6,8 @@ ARGUMENTS
 		field_id:{
 					
 			validation_event: focus_change / keypress
-
-			validate_with: [{validator_name: arg},..more validators] / function  
+			
+			validate_with: {validator_name: arg,...more validators} / function  
 
 			on_success: framework_name / function 
 
@@ -41,8 +41,14 @@ should_equal: id_of_other_element
 ----------------------------------------
 
 ****/
-function WJ_Validator(args){
+function WJ_Validator(args,css_framework){
 	this.args = args;
+	this.css_framework = css_framework;
+	/***
+	key -> field_id(with prefixed hash)
+	value -> form_id(without prefixed hash)
+	***/
+	this.field_locs = {};
 	
 
 	/****
@@ -56,11 +62,17 @@ function WJ_Validator(args){
 	this.validate_with_defaults = {
 
 	};
-	this.on_success_defaults = {
+
+	this.on_success_defaults = function(){
 
 	};
 
-	this.on_failure_defaults = this.on_success_defaults;
+	/***
+	this function is called when a validation fails.
+	***/
+	this.on_failure_defaults = function(validator_name,validator_arg){
+
+	};
 
 	this.do_before_validating_defaults = {
 		
@@ -78,6 +90,9 @@ function WJ_Validator(args){
 		"do_before_validating" : this.do_before_validating_defaults,
 		"do_after_validating" : this.do_after_validating_defaults
 	};
+
+
+
 	/***
 	defaults end
 	***/
@@ -103,7 +118,7 @@ WJ_Validator.prototype = {
 				the id of the field.
 				***/	
 				var field_id = "#" + f;
-
+				this.field_locs[field_id] = fo;
 				/***
 				merge the defaults with the incoming field definition.
 				use jquery extend.
@@ -126,17 +141,45 @@ WJ_Validator.prototype = {
 		keypress_fields = keypress_fields.join(",");
 
 		$(document).on("focus",focus_change_fields,function(e){
-			validate(e);
+			this.main(e);
 		});
 
 		$(document).on("keydown",keypress_fields,function(e){
-			validate(e);
+			this.main(e);
 		});
 	},
+	/****
+	given the field_id get its definition from the form definition.
+	****/
+	get_field_object: function(field_id){
+		return this.args[this.field_locs[field_id]][field_id];
+	}
 	/***
 	passes in click event.
 	***/
-	validate: function(e){
-		
+	main: function(e){
+		var field_object = this.get_field_object(e.target.id);
+		var _this = this;
+		validate_with(field_object["validate_with"]);
+
+	},
+	/****	
+	basically calls each validator specified and returns true or false
+	finally returns true if all are true, otherwise false.
+	****/
+	validate_with: function(validate_with){
+		_.each(Object.keys(validate_with),function(def){
+
+		});
+	},
+	format: function(regex_or_predefined_format){
+
+	},
+	required: function(bool){
+
+	},
+	remote: function(remote_url){
+
 	}
+
 }
