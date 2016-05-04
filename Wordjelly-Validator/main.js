@@ -41,11 +41,13 @@ should_equal: id_of_other_element
 ----------------------------------------
 
 ****/
-function WJ_Validator(args,css_framework){
+function WJ_Validator(args,css_framework,log){
 	this.args = args;
+	this.log = log !== null ? log : true;
+	this.logger = {};
 	this.css_framework = css_framework;
 	/***
-	key -> field_id(with prefixed hash)
+	key -> field_id(without prefixed hash)
 	value -> form_id(without prefixed hash)
 	***/
 	this.field_locs = {};
@@ -54,6 +56,7 @@ function WJ_Validator(args,css_framework){
 	/****
 	defaults for field definitions.
 	****/
+
 	this.validation_event_defaults = {
 		"focus_change" : false,
 		"keypress" :  false
@@ -63,15 +66,44 @@ function WJ_Validator(args,css_framework){
 
 	};
 
-	this.on_success_defaults = function(){
+	/****
+	default on success function.
+	this function is called only when all the validators for a given field have passed.
 
+	ARGUMENTS:
+	---------
+	e -> the event which triggered the validation
+	
+	RETURNS:
+	--------
+	null
+
+	****/
+	this.on_success_defaults = function(e){
+		if(this.css_framework !== null && (this.css_framework in this.frameworks)){
+			this.frameworks[this.css_framework]["on_success"](e);
+		}
 	};
 
 	/***
-	this function is called when a validation fails.
-	***/
-	this.on_failure_defaults = function(validator_name,validator_arg){
+	default on failure function.
+	
+	ARGUMENTS:
+	---------
+	validator_name -> eg: format,required,remote_url,any validator name.
+	validator_arg -> the argument that was passed to the validator.
+	e -> the event which triggered the validation.
+	failure_message -> the message defined in the form definition or the default message for the field type if none has been defined.
+	
+	RETURNs:
+	-----------
+	null.
 
+	***/
+	this.on_failure_defaults = function(validator_name,validator_arg,e,failure_message){
+		if(this.css_framework !== null && (this.css_framework in this.frameworks)){
+			this.frameworks[this.css_framework]["on_failure"](validator_name,validator_arg,e,failure_message);
+		}
 	};
 
 	this.do_before_validating_defaults = {
@@ -90,12 +122,46 @@ function WJ_Validator(args,css_framework){
 		"do_before_validating" : this.do_before_validating_defaults,
 		"do_after_validating" : this.do_after_validating_defaults
 	};
-
-
-
 	/***
 	defaults end
 	***/
+
+	/****
+	ARGUMENTS FOR ANY VALIDATOR ARE THE SAME
+	def -> the validator defintion(should have a key->value(format -> email), and a key-value(failure_message -> message))
+	e -> the event which triggered the validation.
+	*****/
+	this.validators = {
+		format: function(def,e){
+			console.log("came to format validator");
+		},
+		required: function(def,e){
+			console.log("came to required validator");
+		},
+		remote: function(def,e){
+			console.log("came to remote validator");
+		},
+		min_length: function(def,e){
+			console.log("came to min length validator");
+		},
+		should_equal: function(def,e){
+			console.log("came to should equal validator");
+		}	
+	},
+	/*****
+	the framework on_success and on_failure functions are passed the same 
+	*****/
+	this.frameworks = {
+		"materialize":{
+			on_success: function(e){
+
+			},
+			on_failure: function(validator_name,validator_arg,e,failure_message){
+
+			}
+		}
+	}
+
 
 }
 
@@ -118,7 +184,7 @@ WJ_Validator.prototype = {
 				the id of the field.
 				***/	
 				var field_id = "#" + f;
-				this.field_locs[field_id] = fo;
+				_this.field_locs[f] = fo;
 				/***
 				merge the defaults with the incoming field definition.
 				use jquery extend.
@@ -136,16 +202,20 @@ WJ_Validator.prototype = {
 
 			});
 		});
+		
+		this.field_locs = _this.field_locs;
+
+
 
 		focus_change_fields = focus_change_fields.join(",");
 		keypress_fields = keypress_fields.join(",");
 
 		$(document).on("focus",focus_change_fields,function(e){
-			this.main(e);
+			_this.main(e);
 		});
 
 		$(document).on("keydown",keypress_fields,function(e){
-			this.main(e);
+			_this.main(e);
 		});
 	},
 	/****
@@ -153,33 +223,40 @@ WJ_Validator.prototype = {
 	****/
 	get_field_object: function(field_id){
 		return this.args[this.field_locs[field_id]][field_id];
-	}
+	},
 	/***
 	passes in click event.
 	***/
 	main: function(e){
 		var field_object = this.get_field_object(e.target.id);
 		var _this = this;
-		validate_with(field_object["validate_with"]);
+		this.validate_with(field_object["validate_with"],e);
 
 	},
 	/****	
 	basically calls each validator specified and returns true or false
 	finally returns true if all are true, otherwise false.
 	****/
-	validate_with: function(validate_with){
-		_.each(Object.keys(validate_with),function(def){
-
+	validate_with: function(validate_with,e){
+		var _this = this;
+		_.each(validate_with,function(def){
+			_.each(Object.keys(def),function(v){
+				//if the validator function is one of the predefined ones.
+				if(v in _this.validators){
+					_this.validators[v](def,e);
+				}
+				//if the validator is a function, but with a custom name
+				else if($.isFunction(def[v])){
+					//we pass in the def and the click event.
+					def[v](def,e);
+				}
+				else{
+					//do nothing.
+					
+				}
+			});
 		});
-	},
-	format: function(regex_or_predefined_format){
-
-	},
-	required: function(bool){
-
-	},
-	remote: function(remote_url){
-
 	}
+	
 
 }
