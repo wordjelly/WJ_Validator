@@ -126,14 +126,30 @@ function WJ_Validator(args,css_framework,log){
 	defaults end
 	***/
 
+	this.default_formats = {
+			email: /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+	}
+
 	/****
 	ARGUMENTS FOR ANY VALIDATOR ARE THE SAME
 	def -> the validator defintion(should have a key->value(format -> email), and a key-value(failure_message -> message))
 	e -> the event which triggered the validation.
 	*****/
 	this.validators = {
+		/***
+		def -> {format : predefined..eg : email / regex / function, failure_message : "whatever it should be"}
+		***/
 		format: function(def,e){
 			console.log("came to format validator");
+			if(def["format"] instanceof RegExp){
+				//run it against the value of the field.
+			}
+			else if($.isFunction(def["format"])){
+				//pass the field value insside.
+			}
+			else{
+
+			}
 		},
 		required: function(def,e){
 			console.log("came to required validator");
@@ -160,6 +176,18 @@ function WJ_Validator(args,css_framework,log){
 
 			}
 		}
+	},
+
+
+	/****
+	Arguments:
+	click_event -> the event that triggered the validation.
+	Returns:
+	@type: the type of the field "text,radio,checkbox,select"
+	@value: the value of the field
+	****/
+	this.get_field_value_and_type = function(click_event){
+
 	}
 
 
@@ -242,18 +270,30 @@ WJ_Validator.prototype = {
 		_.each(validate_with,function(def){
 			_.each(Object.keys(def),function(v){
 				//if the validator function is one of the predefined ones.
+				var is_valid = null;
 				if(v in _this.validators){
-					_this.validators[v](def,e);
+					is_valid = _this.validators[v](def,e);
 				}
 				//if the validator is a function, but with a custom name
 				else if($.isFunction(def[v])){
 					//we pass in the def and the click event.
-					def[v](def,e);
+					is_valid = def[v](def,e);
 				}
 				else{
 					//do nothing.
 					
 				}
+
+				//call the on_success or on_failure function provided in the field defintion
+				
+				//if it has not been provided the default will takeover.
+				
+				//the default calls the framework, if a framework has been defined.
+				//otherwise it does nothing.
+
+				//if it has been provided, then it will be used.
+
+
 			});
 		});
 	}
