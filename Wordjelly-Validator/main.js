@@ -130,10 +130,18 @@ function WJ_Validator(args,css_framework,log){
 	ARGUMENTS FOR ANY VALIDATOR ARE THE SAME
 	def -> the validator defintion(should have a key->value(format -> email), and a key-value(failure_message -> message))
 	e -> the event which triggered the validation.
+
+	RETURN:
+	return on_success , or on_failure function.
+
+	If you want to define a new validator here, then make sure it returns on success or on failure functions.
+	If instead you want to define a validation function in your js file, then it should simply return true/false.
 	*****/
 	this.validators = {
 		format: function(def,e){
 			console.log("came to format validator");
+			//if the format is a predefined string, then ,
+			//else if it is a 
 		},
 		required: function(def,e){
 			console.log("came to required validator");
@@ -143,6 +151,9 @@ function WJ_Validator(args,css_framework,log){
 		},
 		min_length: function(def,e){
 			console.log("came to min length validator");
+		},
+		max_length: function(def,e){
+			console.log("came to max length validator");
 		},
 		should_equal: function(def,e){
 			console.log("came to should equal validator");
