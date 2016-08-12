@@ -52,6 +52,10 @@ function WJ_Validator(args,css_framework,log){
 	***/
 	this.field_locs = {};
 	
+	/***
+	a results object that holds the results of validation of all the fields.
+	***/
+	this.validation_results = {};	
 
 	/****
 	defaults for field definitions.
@@ -164,7 +168,6 @@ function WJ_Validator(args,css_framework,log){
 			var field_value = get_field_value_and_type(e)["value"];
 			//console.log("field value is:" + field_value);
 			if(def["format"] in default_formats){
-				console.log("regex detected");
 				//its a regex
 				//run it against the value of the field.
 				return default_formats[def["format"]].test(field_value);
@@ -175,7 +178,8 @@ function WJ_Validator(args,css_framework,log){
 				return def["format"](field_value);
 			}
 			else{
-
+				//trying to test something thats not in the default formats, and not a function, so returns invalid.
+				return false;
 			}
 
 		},
@@ -236,15 +240,17 @@ WJ_Validator.prototype = {
 				value -> form id
 				***/	
 				_this.field_locs[f] = fo;
+				
+
 				/***
 				merge the defaults with the incoming field definition.
 				use jquery extend.
-				***/
-			
+				***/			
 				var field_obj = $.extend(true,{},_this.field_defaults,form_obj[f]);
 
 				//reassign the extended field object.
 				_this.args[fo][f] = field_obj;
+
 
 				if(field_obj["validation_event"]["focus_change"]){
 					focus_change_fields.push(field_id);
@@ -254,15 +260,11 @@ WJ_Validator.prototype = {
 					keypress_fields.push(field_id);
 				}
 
-				
-
 			});
 		});
 		
 		this.field_locs = _this.field_locs;
 		this.args = _this.args;
-
-
 
 		focus_change_fields = focus_change_fields.join(",");
 		keypress_fields = keypress_fields.join(",");
@@ -286,42 +288,60 @@ WJ_Validator.prototype = {
 	***/
 	main: function(e){
 		var field_object = this.get_field_object(e.target.id);
-		var _this = this;
+		//clears the validation results for this field, as the validate with function is being called.
+		this.validation_results[e.target.id] = {};
 		this.validate_with(field_object,e);
-
 	},
 	/****	
 	basically calls each validator specified and returns true or false
 	finally returns true if all are true, otherwise false.
 	****/
 	validate_with: function(field_object,e){
-		
-		var _this = this;
+		var _this = this;	
+		//we need a results object 
+		//it is an array, one entry for each thing in the validate_with array. fpr this field.
+		//each element contains the validation defintion and an additional key called "result" , which can be true or false.
+		//we should have whatever is false
+		var complete_field_results = [];
+		var failure_field_results = [];
 		_.each(field_object["validate_with"],function(def){
+			var to_be_validated = true;
 			_.each(Object.keys(def),function(v){
 				//if the validator function is one of the predefined ones.
 				var is_valid = null;
-				if(v in _this.validators){
+				if(v in _this.validators && to_be_validated){
 					is_valid = _this.validators[v](def,e);
+					to_be_validated = false;
+					complete_field_results.push($.extend(def,{"result" : is_valid, "event" : e}));
+					//here only check if it is false,and we dont already have 
+					if(!is_valid){
+						failure_field_results.push(def["failure_message"]);
+					}
 				}
 				//if the validator is a function, but with a custom name
-				else if($.isFunction(def[v])){
+				else if($.isFunction(def[v]) && to_be_validated){
 					//we pass in the def and the click event.
 					is_valid = def[v](def,e);
-				}
-				
-				
-				if(is_valid){
-					field_object["on_success"](e);
+					to_be_validated = false;
+					complete_field_results.push($.extend(def,{"result" : is_valid, "event" : e}));
+					if(!is_valid){
+						failure_field_results.push(def["failure_message"]);
+					}
 				}
 				else{
-					field_object["on_failure"](def,e);
+					//tries to call a non-existent validator.
+					//is_valid = false;
 				}
-				
-
 			});
 		});
+
+		//now this field res object, is to be assigned into the validation results object, with the key as the field id.
+		this.validation_results[e.target.id] = complete_field_results;
+
+		//now we have to iterate the array and if we dont hit a false result for it anywhere in the array, then we execute the on_success, otherwise we execute the on_failure 
+		
+		
+
 	}
 	
-
 }
