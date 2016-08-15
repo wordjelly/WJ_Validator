@@ -9,7 +9,7 @@ $(document).on("ready",function(){
 					"focus_change":true,
 				},
 				"validate_with":[
-					{"format":"email","failure_message":"this is not a valid email"}
+					{"format":"email","failure_message":"this is not a valid email", "skip_empty":true}
 				]
 			},
 			"password":{

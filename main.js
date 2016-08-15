@@ -72,10 +72,32 @@ function WJ_Validator(args,css_framework,log){
 	var frameworks = {
 		"materialize":{
 			on_success: function(e){
-				console.log("called materialize on success");
+				var field_val_and_type = get_field_value_and_type(e);
+				var val = field_val_and_type["value"];
+				var type = field_val_and_type["type"];
+				if(type === "text"){
+					var label = $('label[for="'+ e.target.id +'"]');
+		      		var input = $('#' + e.target.id);
+		      		input.attr("class","valid");
+				}	
 			},
 			on_failure: function(def,e){
-				console.log("called materialize on failure");
+				var field_val_and_type = get_field_value_and_type(e);
+				var val = field_val_and_type["value"];
+				var type = field_val_and_type["type"];
+				if(type === "text"){
+					var failure_message = "";
+					_.each(def,function(t){
+						if(!t["result"]){
+							failure_message = t['failure_message'];
+						}
+					});
+					var label = $('label[for="'+ e.target.id +'"]');
+			      	var input = $('#' + e.target.id);
+			      	input.attr("class","invalid");
+					input.attr("aria-invalid",true);
+			      	label.attr("data-error",failure_message);
+		      	}
 			}
 		}
 	}
@@ -109,7 +131,7 @@ function WJ_Validator(args,css_framework,log){
 	
 	ARGUMENTS:
 	---------
-	def -> contains the validation defintion and failure messages.
+	def[Array] -> contains the validation defintion and failure messages, for each validator for the field.(includes failed and successfull validation results.)
 	e -> the event which triggered the validation.
 	
 	RETURNs:
@@ -158,15 +180,19 @@ function WJ_Validator(args,css_framework,log){
 	
 	this.validators = {
 		/***
-		def -> {format : predefined..eg : email / regex / function, failure_message : "whatever it should be"}
+		def -> {format : predefined..eg : email / regex / function, failure_message : "whatever it should be", skip_empty: true/false - default is true}
 		***/
-
 		format: function(def,e){
-			
-			//if the format is a predefined string, then ,
-			//else if it is a 
 			var field_value = get_field_value_and_type(e)["value"];
-			//console.log("field value is:" + field_value);
+			//HANDLE EMPTY FIELD.
+			if(!def["skip_empty"] && field_value.length == 0){
+				
+			}
+			else if(field_value.length == 0){
+				return true;
+			}
+			
+		
 			if(def["format"] in default_formats){
 				//its a regex
 				//run it against the value of the field.
@@ -184,7 +210,7 @@ function WJ_Validator(args,css_framework,log){
 
 		},
 		required: function(def,e){
-			console.log("came to required validator");
+			
 		},
 		remote: function(def,e){
 			console.log("came to remote validator");
@@ -219,6 +245,9 @@ function WJ_Validator(args,css_framework,log){
 
 WJ_Validator.prototype = {
 	constructor: WJ_Validator,
+	default_failure_message: function(){
+		return "This field is invalid";
+	},
 	register_handlers: function(){
 		var focus_change_fields = [];
 		var keypress_fields = [];
@@ -273,7 +302,7 @@ WJ_Validator.prototype = {
 			_this.main(e);
 		});
 
-		$(document).on("keydown",keypress_fields,function(e){
+		$(document).on("keyup",keypress_fields,function(e){
 			_this.main(e);
 		});
 	},
@@ -298,11 +327,13 @@ WJ_Validator.prototype = {
 	****/
 	validate_with: function(field_object,e){
 		var _this = this;	
-		//we need a results object 
-		//it is an array, one entry for each thing in the validate_with array. fpr this field.
-		//each element contains the validation defintion and an additional key called "result" , which can be true or false.
-		//we should have whatever is false
+		/***
+		holds the results of running each validator specified for the field.
+		***/
 		var complete_field_results = [];
+		/***
+		holds the message that is to be shown when a validation has failed, one entry for whichever validators have failed.
+		***/
 		var failure_field_results = [];
 		_.each(field_object["validate_with"],function(def){
 			var to_be_validated = true;
@@ -311,35 +342,34 @@ WJ_Validator.prototype = {
 				var is_valid = null;
 				if(v in _this.validators && to_be_validated){
 					is_valid = _this.validators[v](def,e);
-					to_be_validated = false;
-					complete_field_results.push($.extend(def,{"result" : is_valid, "event" : e}));
-					//here only check if it is false,and we dont already have 
-					if(!is_valid){
-						failure_field_results.push(def["failure_message"]);
-					}
 				}
 				//if the validator is a function, but with a custom name
 				else if($.isFunction(def[v]) && to_be_validated){
 					//we pass in the def and the click event.
-					is_valid = def[v](def,e);
+					is_valid = def[v](def,e);	
+				}
+				if(is_valid!== null){
 					to_be_validated = false;
-					complete_field_results.push($.extend(def,{"result" : is_valid, "event" : e}));
+					complete_field_results.push($.extend(true,{},{"result" : is_valid, "event" : e, "failure_message" : _this.default_failure_message()},def));
+					//here only check if it is false,and we dont already have 
 					if(!is_valid){
-						failure_field_results.push(def["failure_message"]);
+						
+						failure_field_results.push(_.last(complete_field_results)["failure_message"]);
 					}
 				}
-				else{
-					//tries to call a non-existent validator.
-					//is_valid = false;
-				}
+				
 			});
 		});
 
 		//now this field res object, is to be assigned into the validation results object, with the key as the field id.
 		this.validation_results[e.target.id] = complete_field_results;
 
-		//now we have to iterate the array and if we dont hit a false result for it anywhere in the array, then we execute the on_success, otherwise we execute the on_failure 
-		
+		if(_.isEmpty(failure_field_results)){
+			field_object["on_success"](e);
+		}
+		else{
+			field_object["on_failure"](this.validation_results[e.target.id],e);
+		}
 		
 
 	}
