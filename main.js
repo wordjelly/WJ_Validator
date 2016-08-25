@@ -45,7 +45,7 @@ function WJ_Validator(args,css_framework,log){
 	this.args = args;
 	this.log = log !== null ? log : true;
 	this.logger = {};
-	var css_framework = css_framework;
+	this.css_framework = css_framework;
 	/***
 	key -> field_id(without prefixed hash)
 	value -> form_id(without prefixed hash)
@@ -69,7 +69,7 @@ function WJ_Validator(args,css_framework,log){
 	/*****
 	the framework on_success and on_failure functions are passed the same 
 	*****/
-	var frameworks = {
+	this.frameworks = {
 		"materialize":{
 			on_success: function(e){
 				var field_val_and_type = get_field_value_and_type(e);
@@ -98,6 +98,14 @@ function WJ_Validator(args,css_framework,log){
 					input.attr("aria-invalid",true);
 			      	label.attr("data-error",failure_message);
 		      	}
+			},
+			on_load: function(){
+				$(document).on("focusout",":input",function(e){
+					if($(this).hasClass("invalid")){
+						var label = $(this).parent().find("label");
+						label.attr("data-error","");
+					}
+				});
 			}
 		}
 	}
@@ -121,8 +129,8 @@ function WJ_Validator(args,css_framework,log){
 	****/
 	this.on_success_defaults = function(e){
 
-		if(css_framework !== null && (css_framework in frameworks)){
-			frameworks[css_framework]["on_success"](e);
+		if(css_framework !== null && (css_framework in _this.frameworks)){
+			_this.frameworks[css_framework]["on_success"](e);
 		}
 	};
 
@@ -140,8 +148,8 @@ function WJ_Validator(args,css_framework,log){
 
 	***/
 	this.on_failure_defaults = function(def,e){
-		if(css_framework !== null && (css_framework in frameworks)){
-			frameworks[css_framework]["on_failure"](def,e);
+		if(css_framework !== null && (css_framework in _this.frameworks)){
+			_this.frameworks[css_framework]["on_failure"](def,e);
 		}
 	};
 
@@ -240,6 +248,9 @@ function WJ_Validator(args,css_framework,log){
 		return {"type":jquery_el.attr('type'), "value" : jquery_el.val()};
 	}
 
+	this.register_handlers();
+
+	var _this = this;
 
 }
 
@@ -305,6 +316,10 @@ WJ_Validator.prototype = {
 		$(document).on("keyup",keypress_fields,function(e){
 			_this.main(e);
 		});
+
+		//if the frameworks have any specific things to be done on load, then do it here.
+		this.frameworks[this.css_framework]["on_load"]();
+		
 	},
 	/****
 	given the field_id get its definition from the form definition.

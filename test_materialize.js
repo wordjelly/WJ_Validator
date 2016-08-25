@@ -9,7 +9,7 @@ $(document).on("ready",function(){
 					"focus_change":true,
 				},
 				"validate_with":[
-					{"format":"email","failure_message":"this is not a valid email", "skip_empty":true}
+					{"format":"email","failure_message":"this is not a valid email", "skip_empty":false}
 				]
 			},
 			"password":{
@@ -28,6 +28,7 @@ $(document).on("ready",function(){
 	};
 
 	var validator = new WJ_Validator(args,"materialize");
-	validator.register_handlers();
+	//validator.register_handlers();
+	//validator.register_framework_specific_handlers();
 
 });
