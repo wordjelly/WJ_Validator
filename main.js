@@ -72,7 +72,7 @@ function WJ_Validator(args,css_framework,log){
 	this.frameworks = {
 		"materialize":{
 			on_success: function(e){
-				var field_val_and_type = get_field_value_and_type(e);
+				var field_val_and_type = get_field_attrs(e);
 				var val = field_val_and_type["value"];
 				var type = field_val_and_type["type"];
 				if(type === "text"){
@@ -82,7 +82,8 @@ function WJ_Validator(args,css_framework,log){
 				}	
 			},
 			on_failure: function(def,e){
-				var field_val_and_type = get_field_value_and_type(e);
+
+				var field_val_and_type = get_field_attrs(e);
 				var val = field_val_and_type["value"];
 				var type = field_val_and_type["type"];
 				if(type === "text"){
@@ -188,40 +189,70 @@ function WJ_Validator(args,css_framework,log){
 	
 	this.validators = {
 		/***
-		def -> {format : predefined..eg : email / regex / function, failure_message : "whatever it should be", skip_empty: true/false - default is true}
+		@param[Object] def:
+		format => email/regex/function
+		failure_message => "whatever you want."
+		skip_empty => true/false, defaults to true.
+
+		@return[Deferred Object]
 		***/
 		format: function(def,e){
-			var field_value = get_field_value_and_type(e)["value"];
+			var result = $.Deferred();
+			var field_value = get_field_attrs(e)["value"];
 			//HANDLE EMPTY FIELD.
 			if(!def["skip_empty"] && field_value.length == 0){
 				
 			}
 			else if(field_value.length == 0){
-				return true;
+				result.resolve({"is_valid" : true});
 			}
 			
 		
 			if(def["format"] in default_formats){
 				//its a regex
 				//run it against the value of the field.
-				return default_formats[def["format"]].test(field_value);
+				result.resolve({"is_valid" : default_formats[def["format"]].test(field_value)});
 			}
 			else if($.isFunction(def["format"])){
 				//its a function
 				//pass the field value insside.
-				return def["format"](field_value);
+				result.resolve({"is_valid" : def["format"](field_value)});
 			}
 			else{
 				//trying to test something thats not in the default formats, and not a function, so returns invalid.
-				return false;
+				result.resolve({"is_valid" : false});
 			}
+			return result;
+		},
+		/***
+		@param[Object]:def 
+		"required" => true/function
+		"failure_message" => whatever you want.
 
-		},
+		@return[Deferred Object]
+		***/
 		required: function(def,e){
-			
+			var result = $.Deferred();
+			var field_value = get_field_attrs(e)["value"];
+			if($.isFunction(def["required"])){
+				result.resolve({"is_valid" : def["required"](field_value)});
+			}
+			result.resolve({"is_valid" : field_value.length > 0});
+			return result;
 		},
+		/****
+		@param[Object] def:
+		"remote" => true/function,
+		"ajax_settings" => {}
+		@return[Promise object] 
+		****/
 		remote: function(def,e){
-			console.log("came to remote validator");
+			if($.isFunction(def["remote"])){
+				return def["remote"](field_value);
+			}
+			var field_attrs = get_field_attrs(e);
+			var ajax_settings = def["ajax_settings"];
+			return $.ajax(ajax_settings);
 		},
 		min_length: function(def,e){
 			console.log("came to min length validator");
@@ -243,9 +274,9 @@ function WJ_Validator(args,css_framework,log){
 	@type: the type of the field "text,radio,checkbox,select"
 	@value: the value of the field
 	****/
-	var get_field_value_and_type = function(e){
+	var get_field_attrs = function(e){
 		jquery_el = $("#" + e.target.id);
-		return {"type":jquery_el.attr('type'), "value" : jquery_el.val()};
+		return {"type":jquery_el.attr('type'), "value" : jquery_el.val(), "name" : jquery_el.attr('name')};
 	}
 
 	this.register_handlers();
@@ -365,27 +396,23 @@ WJ_Validator.prototype = {
 				}
 				if(is_valid!== null){
 					to_be_validated = false;
-					complete_field_results.push($.extend(true,{},{"result" : is_valid, "event" : e, "failure_message" : _this.default_failure_message()},def));
-					//here only check if it is false,and we dont already have 
-					if(!is_valid){
-						
-						failure_field_results.push(_.last(complete_field_results)["failure_message"]);
-					}
+					is_valid.done(function(data){
+						complete_field_results.push($.extend(true,{},{"result" : data["is_valid"], "event" : e, "failure_message" : _this.default_failure_message()},def));
+						if(data["is_valid"]){
+							field_object["on_success"](e);
+						}
+						else{
+							field_object["on_failure"](complete_field_results,e);
+						}
+					});
+					is_valid.fail(function(d){
+						complete_field_results.push($.extend(true,{},{"result" : false, "event" : e, "failure_message" : _this.default_failure_message()},def));
+						field_object["on_failure"](complete_field_results,e);
+					});
 				}
 				
 			});
 		});
-
-		//now this field res object, is to be assigned into the validation results object, with the key as the field id.
-		this.validation_results[e.target.id] = complete_field_results;
-
-		if(_.isEmpty(failure_field_results)){
-			field_object["on_success"](e);
-		}
-		else{
-			field_object["on_failure"](this.validation_results[e.target.id],e);
-		}
-		
 
 	}
 	
