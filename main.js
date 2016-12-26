@@ -82,7 +82,6 @@ function WJ_Validator(args,css_framework,log){
 				}	
 			},
 			on_failure: function(def,e){
-
 				var field_val_and_type = get_field_attrs(e);
 				var val = field_val_and_type["value"];
 				var type = field_val_and_type["type"];
@@ -190,10 +189,10 @@ function WJ_Validator(args,css_framework,log){
 	this.validators = {
 		/***
 		@param[Object] def:
-		format => email/regex/function
-		failure_message => "whatever you want."
-		skip_empty => true/false, defaults to true.
-
+			format => email/regex/function
+			failure_message => "whatever you want."
+			skip_empty => true/false, defaults to true.
+			args => arguments hash to pass to your custom function in case you are using one for the format.
 		@return[Deferred Object]
 		***/
 		format: function(def,e){
@@ -216,7 +215,7 @@ function WJ_Validator(args,css_framework,log){
 			else if($.isFunction(def["format"])){
 				//its a function
 				//pass the field value insside.
-				result.resolve({"is_valid" : def["format"](field_value)});
+				result.resolve({"is_valid" : def["format"](field_value,def["args"])});
 			}
 			else{
 				//trying to test something thats not in the default formats, and not a function, so returns invalid.
@@ -228,14 +227,14 @@ function WJ_Validator(args,css_framework,log){
 		@param[Object]:def 
 		"required" => true/function
 		"failure_message" => whatever you want.
-
+		"args" => custom arguments hash to pass to your required function if you decide to use it.
 		@return[Deferred Object]
 		***/
 		required: function(def,e){
 			var result = $.Deferred();
 			var field_value = get_field_attrs(e)["value"];
 			if($.isFunction(def["required"])){
-				result.resolve({"is_valid" : def["required"](field_value)});
+				result.resolve({"is_valid" : def["required"](field_value,def["args"])});
 			}
 			result.resolve({"is_valid" : field_value.length > 0});
 			return result;
@@ -243,15 +242,17 @@ function WJ_Validator(args,css_framework,log){
 		/****
 		@param[Object] def:
 		"remote" => true/function,
-		"ajax_settings" => {}
+		"ajax_settings" => function, which accepts one argument, namely the field value.
+		"args" => custom arguments hash to pass to your "remote" function or to your ajax settings function.
 		@return[Promise object] 
 		****/
 		remote: function(def,e){
+			var result = $.Deferred();
 			if($.isFunction(def["remote"])){
-				return def["remote"](field_value);
+				return result.resolve({"is_valid" : def["remote"](field_value,def["args"])});
 			}
 			var field_attrs = get_field_attrs(e);
-			var ajax_settings = def["ajax_settings"];
+			var ajax_settings = def["ajax_settings"](field_attrs["value"],def["args"]);
 			return $.ajax(ajax_settings);
 		},
 		min_length: function(def,e){
@@ -260,8 +261,16 @@ function WJ_Validator(args,css_framework,log){
 		max_length: function(def,e){
 			console.log("came to max length validator");
 		},
-		should_equal: function(def,e){
-			console.log("came to should equal validator");
+		/***
+		def ->
+		-should_be_equal => true/function
+		-field_array => [Array], array of field ids whose values should all be equal.
+		-args => object of arguments to pass to the custom function,
+		e -> 
+		-the event.
+		***/
+		should_be_equal: function(def,e){
+			
 		}	
 	}
 	
@@ -289,6 +298,9 @@ WJ_Validator.prototype = {
 	constructor: WJ_Validator,
 	default_failure_message: function(){
 		return "This field is invalid";
+	},
+	validation_could_not_be_done_message: function(){
+		return "server error";
 	},
 	register_handlers: function(){
 		var focus_change_fields = [];
@@ -329,6 +341,24 @@ WJ_Validator.prototype = {
 
 				if(field_obj["validation_event"]["keypress"]){
 					keypress_fields.push(field_id);
+				}
+
+				/****
+				register the handlers for all the fields mentioned in the should_equal array.
+				****/
+				var sbe = _.filter(field_obj["validate_with"],function(def){
+					return "should_be_equal" in def;
+				});
+				//if the selected def contains a field array key.
+				if("field_array" in sbe){
+					_.each(sbe["field_array"],function(f){
+						if(field_obj["validation_event"]["focus_change"]){
+							focus_change_fields.push(f);
+						}
+						if(field_obj["validation_event"]["keypress"]){
+							keypress_fields.push(f);
+						}
+					});
 				}
 
 			});
@@ -397,6 +427,10 @@ WJ_Validator.prototype = {
 				if(is_valid!== null){
 					to_be_validated = false;
 					is_valid.done(function(data){
+						if(_this.log){
+							console.log("validation response");
+							console.log(data);
+						}
 						complete_field_results.push($.extend(true,{},{"result" : data["is_valid"], "event" : e, "failure_message" : _this.default_failure_message()},def));
 						if(data["is_valid"]){
 							field_object["on_success"](e);
@@ -406,7 +440,7 @@ WJ_Validator.prototype = {
 						}
 					});
 					is_valid.fail(function(d){
-						complete_field_results.push($.extend(true,{},{"result" : false, "event" : e, "failure_message" : _this.default_failure_message()},def));
+						complete_field_results.push($.extend(true,{},{"result" : false, "event" : e, "failure_message" : _this.default_failure_message()},def,{"failure_message" : _this.validation_could_not_be_done_message}));
 						field_object["on_failure"](complete_field_results,e);
 					});
 				}
