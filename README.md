@@ -39,6 +39,12 @@ settings you want.
     In case you think this increases overhead, most users on the net already have these libraries in their browser caches,
     and most CDN's feature these libraries anyways.
     
+## Installation
+
+Just copy main.min.js into your project. Make sure that you have jquery.js and underscore.js both available in your project.
+
+Alternatively you can clone this repo, and then run bower install from the project root, that will take care of dependencies.
+
 ## How to Use
 
 ```
