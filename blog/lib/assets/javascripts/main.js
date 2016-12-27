@@ -42,6 +42,45 @@ should_equal: id_of_other_element
 
 ****/
 function WJ_Validator(args,css_framework,log){
+	/***
+	var preprocess = function(args){
+		var related_form_fields = {};
+		_.each(Object.keys(args),function(form_id){
+			related_form_fields[form_id] = {};
+			_.each(Object.keys(args[form_id]),function(field_id){
+				var validation_event = args[form_id][field_id]["validation_event"];
+				_.each(args[form_id][field_id]["validate_with"],function(validation,index){
+					if ("field_array" in validation){
+						related_form_fields[form_id][field_id] = {"validate_with" : _(validation).clone(), "validation_event": _(validation_event).clone()};	
+					}
+				});
+			});
+		});
+		for(form_id in related_form_fields){
+			for(parent_field in related_form_fields[form_id]){
+				_.each(related_form_fields[form_id][parent_field]["validate_with"]["field_array"],function(f_id){
+					var q = related_form_fields[form_id][parent_field];
+					q["validate_with"]["field_array"] = _.map(q["validate_with"]["field_array"],function(t){
+						if(t == f_id){
+							return parent_field;
+						}
+						else{
+							return t;
+						}
+					});
+					if(f_id in args[form_id]){
+						args[form_id][f_id]["validate_with"].push(q["validate_with"]);
+					}
+					else{	
+						args[form_id][f_id] = q;
+					}
+				})
+			}
+		}
+		
+		return args;
+	}
+	**/
 	this.args = args;
 	this.log = log !== null ? log : true;
 	this.logger = {};
@@ -66,11 +105,18 @@ function WJ_Validator(args,css_framework,log){
 		"keypress" :  false
 	};
 
+
+
 	var resolve_fields = function(def,e){
+		
 		if("field_array" in def){
-			return def["field_array"];
+			var arr = _(def["field_array"]).clone();
+			arr.push(e.target.id);
+			
+			return arr;
 		}
 		else{
+			
 			return [e.target.id];
 		}
 	}
@@ -85,8 +131,8 @@ function WJ_Validator(args,css_framework,log){
 					var val = $("#" + name).val();
 					var type = $("#" + name).attr("type");
 					if(type === "text"){
-						var label = $('label[for="'+ e.target.id +'"]');
-			      		var input = $('#' + e.target.id);
+						var label = $('label[for="'+ name +'"]');
+			      		var input = $('#' + name);
 			      		input.attr("class","valid");
 					}
 				});
@@ -97,14 +143,9 @@ function WJ_Validator(args,css_framework,log){
 					var val = $("#" + name).val();
 					var type = $("#" + name).attr("type");
 					if(type === "text"){
-						var failure_message = "";
-						_.each(def,function(t){
-							if(!t["result"]){
-								failure_message = t['failure_message'];
-							}
-						});
-						var label = $('label[for="'+ e.target.id +'"]');
-				      	var input = $('#' + e.target.id);
+						var failure_message = def["failure_message"];
+						var label = $('label[for="'+ name +'"]');
+				      	var input = $('#' + name);
 				      	input.attr("class","invalid");
 						input.attr("aria-invalid",true);
 				      	label.attr("data-error",failure_message);
@@ -281,15 +322,19 @@ function WJ_Validator(args,css_framework,log){
 		-the event.
 		***/
 		should_be_equal: function(def,e){
+			
 			var result = $.Deferred();
+			
 			if($.isFunction(def["remote"])){
 				return result.resolve({"is_valid" : def["remote"](def,e)});
 			}
 			else{
 				if("field_array" in def){
-					return result.resolve({"is_valid" : _.uniq(_.map(def["field_array"],function(t){
-						t = $("#" + t).val();
-					})).length > 0});
+					var values_arr = _.map(def["field_array"],function(t){
+						return $("#" + t).val();
+					});
+					values_arr.push($("#" + e.target.id).val());
+					return result.resolve({"is_valid" : _.uniq(values_arr).length == 1});
 				}
 				else{
 					return result.resolve({"is_valid" : false});
@@ -329,7 +374,9 @@ WJ_Validator.prototype = {
 	register_handlers: function(){
 		var focus_change_fields = [];
 		var keypress_fields = [];
+		var two_binding_fields = {};
 		var _this = this;
+
 		_.each(Object.keys(_this.args),function(fo){
 			
 			/***
@@ -363,27 +410,18 @@ WJ_Validator.prototype = {
 					focus_change_fields.push(field_id);
 				}
 
-				if(field_obj["validation_event"]["keypress"]){
+				if(field_obj["validation_event"]["keypress"] || _.filter(field_obj["validate_with"],function(r){
+					return "should_be_equal" in r;
+				}).length > 0){
 					keypress_fields.push(field_id);
 				}
 
-				/****
-				register the handlers for all the fields mentioned in the should_equal array.
-				****/
-				var sbe = _.filter(field_obj["validate_with"],function(def){
-					return "should_be_equal" in def;
-				});
-				//if the selected def contains a field array key.
-				if("field_array" in sbe){
-					_.each(sbe["field_array"],function(f){
-						if(field_obj["validation_event"]["focus_change"]){
-							focus_change_fields.push(f);
-						}
-						if(field_obj["validation_event"]["keypress"]){
-							keypress_fields.push(f);
-						}
-					});
+				if(_.filter(field_obj["validate_with"],function(r){
+					return "field_array" in r;
+				}).length > 0){
+					two_binding_fields[f] = field_obj["validate_with"][0]["field_array"];
 				}
+
 
 			});
 		});
@@ -393,14 +431,34 @@ WJ_Validator.prototype = {
 
 		focus_change_fields = focus_change_fields.join(",");
 		keypress_fields = keypress_fields.join(",");
+		
+		console.log("focus change fields");
+		console.log(focus_change_fields);
 
-		$(document).on("focus",focus_change_fields,function(e){
+		console.log("keypress fields");
+		console.log(keypress_fields);
+
+		if(focus_change_fields != ""){
+		$(document).on("focus custom",focus_change_fields,function(e){
+			console.log("triggered focus change fields");
 			_this.main(e);
 		});
+		}	
 
-		$(document).on("keyup",keypress_fields,function(e){
+		if(keypress_fields != ""){
+		$(document).on("keyup custom",keypress_fields,function(e){
+			console.log("triggered kepress fields");
 			_this.main(e);
 		});
+		}
+
+		
+		for(ff in two_binding_fields){
+			$(document).on("keyup",_.map(two_binding_fields[ff],function(n){return "#" + n;}).join(","),function(e){
+				e.preventDefault();
+				$("#"+ff).trigger("custom");
+			});
+		}
 
 		//if the frameworks have any specific things to be done on load, then do it here.
 		this.frameworks[this.css_framework]["on_load"]();
@@ -416,6 +474,8 @@ WJ_Validator.prototype = {
 	passes in click event.
 	***/
 	main: function(e){
+		console.log("triggered main with event");
+		console.log(e);
 		var field_object = this.get_field_object(e.target.id);
 		//clears the validation results for this field, as the validate with function is being called.
 		this.validation_results[e.target.id] = {};
@@ -460,12 +520,12 @@ WJ_Validator.prototype = {
 							field_object["on_success"](def,e);
 						}
 						else{
-							field_object["on_failure"](complete_field_results,e);
+							field_object["on_failure"](_.last(complete_field_results),e);
 						}
 					});
 					is_valid.fail(function(d){
 						complete_field_results.push($.extend(true,{},{"result" : false, "event" : e, "failure_message" : _this.default_failure_message()},def,{"failure_message" : _this.validation_could_not_be_done_message}));
-						field_object["on_failure"](complete_field_results,e);
+						field_object["on_failure"](_.last(complete_field_results),e);
 					});
 				}
 				
