@@ -49,14 +49,7 @@ Alternatively you can clone this repo, and then run bower install from the proje
 
 ```
 $(document).on("ready",function(){
-/***
-the validator accepts any number of forms with any number of fields.
-Follow the schema below.
-Here the form "my_form_id", has only one field "my_field_id"
-Each field has the following validation settings:
-"validation_event" -> supports any jquery compatible events.
-"validate_with" -> array of validators.
-***/
+
 var validation_settings = {
   "my_form_id" : {
     "my_field_id" : {
