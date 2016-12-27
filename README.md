@@ -41,7 +41,7 @@ settings you want.
     
 ## Installation
 
-Just copy main.min.js into your project. Make sure that you have jquery.js and underscore.js both available in your project.
+Just copy __main.min.js__ into your project. Make sure that you have __jquery.js__ and __underscore.js__ both available in your project.
 
 Alternatively you can clone this repo, and then run bower install from the project root, that will take care of dependencies.
 
