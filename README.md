@@ -44,26 +44,6 @@ settings you want.
 ```
 $(document).on("ready",function(){
 /***
-For remote validation, you need to define a simple function to return the ajax settings.
-It is exactly the same as making a $.ajax(settings) call using jquery.
-The function you specify always accepts two params.
-1. def -> the validate_with hash that you specified.
-2. e -> the event that triggered the validation.
-***/
-var ajax_for_my_field_id = function(def,e){		
-		var ajax_settings = {
-			"url": "check_name",
-			"dataType":"json",
-			"data":{
-					"book":{
-						"name":$("#" + e.target.id).val()
-					}
-				}
-			}
-		return ajax_settings;
-}
-
-/***
 the validator accepts any number of forms with any number of fields.
 Follow the schema below.
 Here the form "my_form_id", has only one field "my_field_id"
@@ -79,12 +59,7 @@ var validation_settings = {
         "keypress" : true
       },
       "validate_with":[
-        {"required" : "true"},
-        { "remote":"true",
-          "failure_message":"that book name is taken, choose another.",
-	  //for the ajax settings use the function that you defined above.
-	  "ajax_settings": ajax_for_my_field_id
-        }
+        {"required" : "true"}
       ]
     }
   }
@@ -94,3 +69,7 @@ var validation_settings = {
 var validator = new WJ_Validator(validation_settings,"Materialize",true);
 }
 ```
+
+That's all you need to get this working!
+
+The rest of this page describes how to set up other inbuilt validators, your own custom validation functions, before and after hooks etc.
