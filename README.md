@@ -46,6 +46,9 @@ $(document).on("ready",function(){
 /***
 For remote validation, you need to define a simple function to return the ajax settings.
 It is exactly the same as making a $.ajax(settings) call using jquery.
+The function you specify always accepts two params.
+1. def -> the validate_with hash that you specified.
+2. e -> the event that triggered the validation.
 ***/
 var ajax_for_my_field_id = function(def,e){		
 		var ajax_settings = {
@@ -78,8 +81,9 @@ var validation_settings = {
       "validate_with":[
         {"required" : "true"},
         { "remote":"true",
-					"failure_message":"that book name is taken, choose another.",
-					"ajax_settings": ajax_for_my_field_id
+          "failure_message":"that book name is taken, choose another.",
+	  //for the ajax settings use the function that you defined above.
+	  "ajax_settings": ajax_for_my_field_id
         }
       ]
     }
