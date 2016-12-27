@@ -3,6 +3,8 @@ class Book
   attr_accessor :is_valid
   field :name, type: String
   field :is_valid, type: Boolean
+  field :password, type: String
+  field :confirm_password, type: String
 
   def check_availability
     a = Book.where(:name => self.name)

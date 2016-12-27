@@ -66,38 +66,50 @@ function WJ_Validator(args,css_framework,log){
 		"keypress" :  false
 	};
 
+	var resolve_fields = function(def,e){
+		if("field_array" in def){
+			return def["field_array"];
+		}
+		else{
+			return [e.target.id];
+		}
+	}
+
 	/*****
 	the framework on_success and on_failure functions are passed the same 
 	*****/
 	this.frameworks = {
 		"materialize":{
-			on_success: function(e){
-				var field_val_and_type = get_field_attrs(e);
-				var val = field_val_and_type["value"];
-				var type = field_val_and_type["type"];
-				if(type === "text"){
-					var label = $('label[for="'+ e.target.id +'"]');
-		      		var input = $('#' + e.target.id);
-		      		input.attr("class","valid");
-				}	
+			on_success: function(def,e){
+				_.each(resolve_fields(def,e),function(name){
+					var val = $("#" + name).val();
+					var type = $("#" + name).attr("type");
+					if(type === "text"){
+						var label = $('label[for="'+ e.target.id +'"]');
+			      		var input = $('#' + e.target.id);
+			      		input.attr("class","valid");
+					}
+				});
+					
 			},
 			on_failure: function(def,e){
-				var field_val_and_type = get_field_attrs(e);
-				var val = field_val_and_type["value"];
-				var type = field_val_and_type["type"];
-				if(type === "text"){
-					var failure_message = "";
-					_.each(def,function(t){
-						if(!t["result"]){
-							failure_message = t['failure_message'];
-						}
-					});
-					var label = $('label[for="'+ e.target.id +'"]');
-			      	var input = $('#' + e.target.id);
-			      	input.attr("class","invalid");
-					input.attr("aria-invalid",true);
-			      	label.attr("data-error",failure_message);
-		      	}
+				_.each(resolve_fields(def,e),function(name){
+					var val = $("#" + name).val();
+					var type = $("#" + name).attr("type");
+					if(type === "text"){
+						var failure_message = "";
+						_.each(def,function(t){
+							if(!t["result"]){
+								failure_message = t['failure_message'];
+							}
+						});
+						var label = $('label[for="'+ e.target.id +'"]');
+				      	var input = $('#' + e.target.id);
+				      	input.attr("class","invalid");
+						input.attr("aria-invalid",true);
+				      	label.attr("data-error",failure_message);
+		      		}
+		      	})
 			},
 			on_load: function(){
 				$(document).on("focusout",":input",function(e){
@@ -127,10 +139,10 @@ function WJ_Validator(args,css_framework,log){
 	null
 
 	****/
-	this.on_success_defaults = function(e){
+	this.on_success_defaults = function(def,e){
 
 		if(css_framework !== null && (css_framework in _this.frameworks)){
-			_this.frameworks[css_framework]["on_success"](e);
+			_this.frameworks[css_framework]["on_success"](def,e);
 		}
 	};
 
@@ -215,7 +227,7 @@ function WJ_Validator(args,css_framework,log){
 			else if($.isFunction(def["format"])){
 				//its a function
 				//pass the field value insside.
-				result.resolve({"is_valid" : def["format"](field_value,def["args"])});
+				result.resolve({"is_valid" : def["format"](def,e)});
 			}
 			else{
 				//trying to test something thats not in the default formats, and not a function, so returns invalid.
@@ -234,7 +246,7 @@ function WJ_Validator(args,css_framework,log){
 			var result = $.Deferred();
 			var field_value = get_field_attrs(e)["value"];
 			if($.isFunction(def["required"])){
-				result.resolve({"is_valid" : def["required"](field_value,def["args"])});
+				result.resolve({"is_valid" : def["required"](def,e)});
 			}
 			result.resolve({"is_valid" : field_value.length > 0});
 			return result;
@@ -242,17 +254,16 @@ function WJ_Validator(args,css_framework,log){
 		/****
 		@param[Object] def:
 		"remote" => true/function,
-		"ajax_settings" => function, which accepts one argument, namely the field value.
+		"ajax_settings" => function, the function accepts the def and the event.
 		"args" => custom arguments hash to pass to your "remote" function or to your ajax settings function.
 		@return[Promise object] 
 		****/
 		remote: function(def,e){
 			var result = $.Deferred();
 			if($.isFunction(def["remote"])){
-				return result.resolve({"is_valid" : def["remote"](field_value,def["args"])});
+				return result.resolve({"is_valid" : def["remote"](def,e)});
 			}
-			var field_attrs = get_field_attrs(e);
-			var ajax_settings = def["ajax_settings"](field_attrs["value"],def["args"]);
+			var ajax_settings = def["ajax_settings"](def,e);
 			return $.ajax(ajax_settings);
 		},
 		min_length: function(def,e){
@@ -270,7 +281,20 @@ function WJ_Validator(args,css_framework,log){
 		-the event.
 		***/
 		should_be_equal: function(def,e){
-			
+			var result = $.Deferred();
+			if($.isFunction(def["remote"])){
+				return result.resolve({"is_valid" : def["remote"](def,e)});
+			}
+			else{
+				if("field_array" in def){
+					return result.resolve({"is_valid" : _.uniq(_.map(def["field_array"],function(t){
+						t = $("#" + t).val();
+					})).length > 0});
+				}
+				else{
+					return result.resolve({"is_valid" : false});
+				}				
+			}
 		}	
 	}
 	
@@ -433,7 +457,7 @@ WJ_Validator.prototype = {
 						}
 						complete_field_results.push($.extend(true,{},{"result" : data["is_valid"], "event" : e, "failure_message" : _this.default_failure_message()},def));
 						if(data["is_valid"]){
-							field_object["on_success"](e);
+							field_object["on_success"](def,e);
 						}
 						else{
 							field_object["on_failure"](complete_field_results,e);

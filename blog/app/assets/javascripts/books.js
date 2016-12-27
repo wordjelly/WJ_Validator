@@ -1,12 +1,14 @@
 $(document).on("ready",function(){
 	
-	var ajax_settings = function(field_val,args){
+	var ajax_settings = function(def,e){
+		//from the event get the field value.
+		
 		var res = {
 			"url": "check_name",
 			"dataType":"json",
 			"data":{
 					"book":{
-						"name":field_val
+						"name":$("#" + e.target.id).val()
 					}
 				}
 			}
@@ -25,6 +27,17 @@ $(document).on("ready",function(){
 					"remote":"true",
 					"failure_message":"that book name is taken, choose another.",
 					"ajax_settings": ajax_settings
+					}
+				]
+			},
+			"book_password":{
+				"validation_event":{
+					"focus_change":true
+				},
+				"validate_with":[{
+					"should_be_equal":"true",
+					"failure_message":"fields do not match",
+					"field_array":["book_confirm_password"]
 					}
 				]
 			}

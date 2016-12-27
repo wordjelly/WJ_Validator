@@ -11,12 +11,24 @@
     </div>
   <% end %>
   <div class="row">
-  <div class="input-field">
-    <div class="input-field col s6">
-          <input placeholder="Enter a name for your book" id="book_name" type="text" class="validate" name="book[name]">
-          <label for="book_name">Name</label>
+    <div class="input-field">
+      <div class="input-field col s6">
+            <input placeholder="Enter a name for your book" id="book_name" type="text" class="validate" name="book[name]">
+            <label for="book_name">Name</label>
+      </div>
     </div>
-  </div>
+    <div class="input-field">
+      <div class="input-field col s6">
+            <input placeholder="Enter a password" id="book_password" type="text" class="validate" name="book[password]">
+            <label for="book_password">Password</label>
+      </div>
+    </div>
+    <div class="input-field">
+      <div class="input-field col s6">
+            <input placeholder="confirm password" id="book_confirm_password" type="text" class="validate" name="book[confirm_password]">
+            <label for="book_confirm_password">confirm password.</label>
+      </div>
+    </div>
   </div>
   <div class="actions">
     <%= f.submit %>
