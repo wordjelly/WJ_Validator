@@ -128,11 +128,10 @@ function WJ_Validator(args,css_framework,log){
 				_.each(resolve_fields(def,e),function(name){
 					var val = $("#" + name).val();
 					var type = $("#" + name).attr("type");
-					if(type === "text"){
-						var label = $('label[for="'+ name +'"]');
-			      		var input = $('#' + name);
-			      		input.attr("class","valid");
-					}
+					var label = $('label[for="'+ name +'"]');
+		      		var input = $('#' + name);
+		      		input.attr("class","valid");
+					
 				});
 					
 			},
@@ -141,14 +140,13 @@ function WJ_Validator(args,css_framework,log){
 				_.each(resolve_fields(def,e),function(name){
 					var val = $("#" + name).val();
 					var type = $("#" + name).attr("type");
-					if(type === "text"){
-						var failure_message = def["failure_message"];
-						var label = $('label[for="'+ name +'"]');
-				      	var input = $('#' + name);
-				      	input.attr("class","invalid");
-						input.attr("aria-invalid",true);
-				      	label.attr("data-error",failure_message);
-		      		}
+					var failure_message = def["failure_message"];
+					var label = $('label[for="'+ name +'"]');
+			      	var input = $('#' + name);
+			      	input.attr("class","invalid");
+					input.attr("aria-invalid",true);
+			      	label.attr("data-error",failure_message);
+		      		
 		      	})
 			},
 			on_load: function(){
@@ -476,7 +474,7 @@ WJ_Validator.prototype = {
 		on submitting the form, trigger the custom event on each field of the form object.
 		***/
 		_.each(Object.keys(_this.args),function(fo){
-			$(document).on("submit","#" + fo,function(e){
+			$(document).on("submit ajax:before","#" + fo,function(e){
 				var results = {};
 				var defs = [];
 				$(_.map(Object.keys(_this.args[fo]),function(k){
@@ -485,13 +483,17 @@ WJ_Validator.prototype = {
 				for(keys in results){
 					defs.push(results[keys]);
 				}
+				var ret_val = true;
 				$.when.apply($,_.flatten(defs)).done(function(){
 					if(_.size(_.filter(arguments,function(res){
 						return res["is_valid"] == false; 
 					})) > 0){
 						e.preventDefault();
+						e.stopPropagation();
+						ret_val = false;
 					}
 				});
+				return ret_val;
 			});
 		});
 
