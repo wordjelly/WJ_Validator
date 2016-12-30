@@ -23,10 +23,16 @@ $(document).on("ready",function(){
 					"focus":true,
 					"focusout":true
 				},
-				"validate_with":[{
-					"remote":"true",
+				"validate_with":[
+					/**
+					{
+					"remote":true,
 					"failure_message":"that book name is taken, choose another.",
 					"ajax_settings": ajax_settings
+					},
+					**/
+					{
+					"required":true
 					}
 				]
 			},

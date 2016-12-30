@@ -441,8 +441,8 @@ WJ_Validator.prototype = {
 		***/
 		if(event_handlers != ""){
 			for(event in event_handlers){
-				$(document).on(event + " custom",event_handlers[event].join(","),function(e){
-				_this.main(e);
+				$(document).on(event + " custom",event_handlers[event].join(","),function(e,ret){
+					ret[e.target.id] =  _this.main(e);
 				});
 			}
 		}	
@@ -463,6 +463,24 @@ WJ_Validator.prototype = {
 			});
 		}
 
+		/****
+		form triggers
+		****/
+
+		/***
+		on submitting the form, trigger the custom event on each field of the form object.
+		***/
+		_.each(Object.keys(_this.args),function(fo){
+			$(document).on("submit","#" + fo,function(e){
+				var results = {};
+				$(_.map(Object.keys(_this.args[fo]),function(k){
+					return "#" + k;
+				}).join(",")).trigger("custom",results);
+				//prevent default if any of the value arrays in the results object contain 
+			});
+		});
+
+
 		//if the frameworks have any specific things to be done on load, then do it here.
 		this.frameworks[this.css_framework]["on_load"]();
 		
@@ -475,19 +493,25 @@ WJ_Validator.prototype = {
 	},
 	/***
 	passes in click event.
+	returns array of deferred objects.
 	***/
 	main: function(e){
-		
-		var field_object = this.get_field_object(e.target.id);
-		//clears the validation results for this field, as the validate with function is being called.
-		this.validation_results[e.target.id] = {};
-		this.validate_with(field_object,e);
+		try{
+			var field_object = this.get_field_object(e.target.id);
+			//clear validation results.
+			this.validation_results[e.target.id] = {};
+			return this.validate_with(field_object,e);
+		}
+		catch(err){
+			return null;
+		}
 	},
 	/****	
 	basically calls each validator specified and returns true or false
 	finally returns true if all are true, otherwise false.
 	****/
 	validate_with: function(field_object,e){
+		var deferred_results = [];
 		var _this = this;	
 		/***
 		holds the results of running each validator specified for the field.
@@ -514,8 +538,9 @@ WJ_Validator.prototype = {
 					to_be_validated = false;
 					is_valid.done(function(data){
 						if(_this.log){
+							console.log(def);
 							console.log("validation response");
-							console.log(data);
+							console.log(data["is_valid"]);
 						}
 						complete_field_results.push($.extend(true,{},{"result" : data["is_valid"], "event" : e, "failure_message" : _this.default_failure_message()},def));
 						if(data["is_valid"]){
@@ -529,10 +554,13 @@ WJ_Validator.prototype = {
 						complete_field_results.push($.extend(true,{},{"result" : false, "event" : e, "failure_message" : _this.default_failure_message()},def,{"failure_message" : _this.validation_could_not_be_done_message}));
 						field_object["on_failure"](_.last(complete_field_results),e);
 					});
+					deferred_results.push(is_valid);
 				}
 				
 			});
 		});
+
+		return deferred_results;
 
 	}
 	
