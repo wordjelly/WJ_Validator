@@ -5,7 +5,7 @@ ARGUMENTS
 
 		field_id:{
 					
-			validation_event: focus_change / keypress
+			validation_events: {"jquery_event" : true/false}
 			
 			validate_with: {validator_name: arg,...more validators} / function  
 
@@ -48,10 +48,10 @@ function WJ_Validator(args,css_framework,log){
 		_.each(Object.keys(args),function(form_id){
 			related_form_fields[form_id] = {};
 			_.each(Object.keys(args[form_id]),function(field_id){
-				var validation_event = args[form_id][field_id]["validation_event"];
+				var validation_events = args[form_id][field_id]["validation_events"];
 				_.each(args[form_id][field_id]["validate_with"],function(validation,index){
 					if ("field_array" in validation){
-						related_form_fields[form_id][field_id] = {"validate_with" : _(validation).clone(), "validation_event": _(validation_event).clone()};	
+						related_form_fields[form_id][field_id] = {"validate_with" : _(validation).clone(), "validation_events": _(validation_events).clone()};	
 					}
 				});
 			});
@@ -100,9 +100,8 @@ function WJ_Validator(args,css_framework,log){
 	defaults for field definitions.
 	****/
 
-	this.validation_event_defaults = {
-		"focus_change" : false,
-		"keypress" :  false
+	this.validation_events_defaults = {
+		
 	};
 
 
@@ -112,7 +111,6 @@ function WJ_Validator(args,css_framework,log){
 		if("field_array" in def){
 			var arr = _(def["field_array"]).clone();
 			arr.push(e.target.id);
-			
 			return arr;
 		}
 		else{
@@ -139,6 +137,7 @@ function WJ_Validator(args,css_framework,log){
 					
 			},
 			on_failure: function(def,e){
+				
 				_.each(resolve_fields(def,e),function(name){
 					var val = $("#" + name).val();
 					var type = $("#" + name).attr("type");
@@ -153,12 +152,14 @@ function WJ_Validator(args,css_framework,log){
 		      	})
 			},
 			on_load: function(){
+				/**
 				$(document).on("focusout",":input",function(e){
 					if($(this).hasClass("invalid")){
 						var label = $(this).parent().find("label");
 						label.attr("data-error","");
 					}
 				});
+				**/
 			}
 		}
 	}
@@ -215,7 +216,7 @@ function WJ_Validator(args,css_framework,log){
 	};
 
 	this.field_defaults = {
-		"validation_event" : this.validation_event_defaults,
+		"validation_events" : this.validation_events_defaults,
 		"validate_with" : this.validate_with_defaults,
 		"on_success": this.on_success_defaults,
 		"on_failure": this.on_failure_defaults,
@@ -372,8 +373,14 @@ WJ_Validator.prototype = {
 		return "server error";
 	},
 	register_handlers: function(){
-		var focus_change_fields = [];
-		var keypress_fields = [];
+		/***
+		jquery_event => array_of_field_ids_to_watch_for_that_event
+		***/
+		var event_handlers = {};
+		/***
+		structure like:
+		field_id => [[array_of_two_way_fields],validation_events_hash]
+		***/
 		var two_binding_fields = {};
 		var _this = this;
 
@@ -405,21 +412,20 @@ WJ_Validator.prototype = {
 				//reassign the extended field object.
 				_this.args[fo][f] = field_obj;
 
-
-				if(field_obj["validation_event"]["focus_change"]){
-					focus_change_fields.push(field_id);
-				}
-
-				if(field_obj["validation_event"]["keypress"] || _.filter(field_obj["validate_with"],function(r){
-					return "should_be_equal" in r;
-				}).length > 0){
-					keypress_fields.push(field_id);
+				
+				for(jEvent in field_obj["validation_events"]){
+					if(jEvent in event_handlers){
+						event_handlers[jEvent].push(field_id);
+					}
+					else{
+						event_handlers[jEvent] = [field_id];
+					}
 				}
 
 				if(_.filter(field_obj["validate_with"],function(r){
 					return "field_array" in r;
 				}).length > 0){
-					two_binding_fields[f] = field_obj["validate_with"][0]["field_array"];
+					two_binding_fields[f] = [field_obj["validate_with"][0]["field_array"],field_obj["validation_events"]];
 				}
 
 
@@ -429,32 +435,29 @@ WJ_Validator.prototype = {
 		this.field_locs = _this.field_locs;
 		this.args = _this.args;
 
-		focus_change_fields = focus_change_fields.join(",");
-		keypress_fields = keypress_fields.join(",");
 		
-		console.log("focus change fields");
-		console.log(focus_change_fields);
-
-		console.log("keypress fields");
-		console.log(keypress_fields);
-
-		if(focus_change_fields != ""){
-		$(document).on("focus custom",focus_change_fields,function(e){
-			console.log("triggered focus change fields");
-			_this.main(e);
-		});
+		/***
+		the custom event is added here because we simulate custom event click in two way binding.
+		***/
+		if(event_handlers != ""){
+			for(event in event_handlers){
+				$(document).on(event + " custom",event_handlers[event].join(","),function(e){
+				_this.main(e);
+				});
+			}
 		}	
 
-		if(keypress_fields != ""){
-		$(document).on("keyup custom",keypress_fields,function(e){
-			console.log("triggered kepress fields");
-			_this.main(e);
-		});
-		}
 
 		
+		/***
+		what event should be used for two-way-binding-fields.
+		whatever is the event for the root field.
+		pick those key-value pairs from the validation event which are true, and then take only those keys and join by space
+		***/
 		for(ff in two_binding_fields){
-			$(document).on("keyup",_.map(two_binding_fields[ff],function(n){return "#" + n;}).join(","),function(e){
+			$(document).on(Object.keys(_.pick(two_binding_fields[ff][1],function(value,key,object){
+				return value == true
+			})).join(" "),_.map(two_binding_fields[ff][0],function(n){return "#" + n;}).join(","),function(e){
 				e.preventDefault();
 				$("#"+ff).trigger("custom");
 			});
@@ -474,8 +477,7 @@ WJ_Validator.prototype = {
 	passes in click event.
 	***/
 	main: function(e){
-		console.log("triggered main with event");
-		console.log(e);
+		
 		var field_object = this.get_field_object(e.target.id);
 		//clears the validation results for this field, as the validate with function is being called.
 		this.validation_results[e.target.id] = {};

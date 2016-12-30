@@ -2,7 +2,6 @@ $(document).on("ready",function(){
 	
 	var ajax_settings = function(def,e){
 		//from the event get the field value.
-		
 		var res = {
 			"url": "check_name",
 			"dataType":"json",
@@ -20,8 +19,9 @@ $(document).on("ready",function(){
 	var args = {
 		"new_book":{
 			"book_name":{
-				"validation_event":{
-					"focus_change":true
+				"validation_events":{
+					"focus":true,
+					"focusout":true
 				},
 				"validate_with":[{
 					"remote":"true",
@@ -31,8 +31,9 @@ $(document).on("ready",function(){
 				]
 			},
 			"book_password":{
-				"validation_event":{
-					"focus_change":true
+				"validation_events":{
+					"focus":true,
+					"focusout":true
 				},
 				"validate_with":[{
 					"should_be_equal":"true",
