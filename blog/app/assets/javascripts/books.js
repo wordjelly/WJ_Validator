@@ -51,5 +51,5 @@ $(document).on("ready",function(){
 		}
 	};
 
-	var validator = new WJ_Validator(args,"materialize",true);
+	var validator = new WJ_Validator(args,"materialize",false);
 });

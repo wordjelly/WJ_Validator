@@ -442,7 +442,12 @@ WJ_Validator.prototype = {
 		if(event_handlers != ""){
 			for(event in event_handlers){
 				$(document).on(event + " custom",event_handlers[event].join(","),function(e,ret){
-					ret[e.target.id] =  _this.main(e);
+						if(ret){
+							ret[e.target.id] =  _this.main(e);
+						}
+						else{
+							_this.main(e);
+						}
 				});
 			}
 		}	
@@ -473,10 +478,20 @@ WJ_Validator.prototype = {
 		_.each(Object.keys(_this.args),function(fo){
 			$(document).on("submit","#" + fo,function(e){
 				var results = {};
+				var defs = [];
 				$(_.map(Object.keys(_this.args[fo]),function(k){
 					return "#" + k;
 				}).join(",")).trigger("custom",results);
-				//prevent default if any of the value arrays in the results object contain 
+				for(keys in results){
+					defs.push(results[keys]);
+				}
+				$.when.apply($,_.flatten(defs)).done(function(){
+					if(_.size(_.filter(arguments,function(res){
+						return res["is_valid"] == false; 
+					})) > 0){
+						e.preventDefault();
+					}
+				});
 			});
 		});
 
