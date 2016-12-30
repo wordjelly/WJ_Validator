@@ -51,9 +51,10 @@ $(document).on("ready",function(){
 var validation_settings = {
   "my_form_id" : {
     "my_field_id" : {
-      "validation_event":{
-        "focus_change" : true,
-        "keypress" : true
+      "validation_events":{
+        "focus" : true,
+        "keypress" : true,
+        "focusout": true
       },
       "validate_with":[
         {"required" : "true"}
