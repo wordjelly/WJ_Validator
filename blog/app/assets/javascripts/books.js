@@ -20,19 +20,16 @@ $(document).on("ready",function(){
 		"new_book":{
 			"book_name":{
 				"validation_events":{
-					"focus":true,
-					"focusout":true
+					"keyup" : true
 				},
 				"validate_with":[
-					/**
 					{
 					"remote":true,
 					"failure_message":"that book name is taken, choose another.",
 					"ajax_settings": ajax_settings
 					},
-					**/
-					{
-					"required":true
+					{"format" : "email",
+					"failure_message": "Please enter a valid email address"
 					}
 				]
 			},
@@ -51,5 +48,16 @@ $(document).on("ready",function(){
 		}
 	};
 
-	var validator = new WJ_Validator(args,"materialize",false);
+	var validator = new WJ_Validator(args,"materialize",true);
 });
+
+/****
+,
+{
+"required":true,
+"failure_message":"this field is required"
+},
+{"format" : "email",
+"failure_message": "Please enter a valid email address"
+}
+****/
