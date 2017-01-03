@@ -24,6 +24,8 @@ class BooksController < ApplicationController
   # POST /books
   # POST /books.json
   def create
+    puts "CAME TO CREATE BOOK WITH PARAMS:"
+    puts params.to_s
     @book = Book.new(book_params)
 
     respond_to do |format|

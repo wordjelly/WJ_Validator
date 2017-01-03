@@ -349,6 +349,7 @@ function WJ_Validator(args,css_framework,log){
 		else{
 			valid = res["is_valid"];
 		}
+		
 		return valid;
 	}
 
@@ -363,7 +364,6 @@ function WJ_Validator(args,css_framework,log){
 			var failed_ids = [];
 			var failure_shown = false;
 			var failures = _.filter(arguments,function(res,index){
-
 				if(!_this.is_valid(res)){
 					if(!failure_shown){
 						deferred_arr[index]["field_object"]["on_failure"](	deferred_arr[index]);
@@ -373,7 +373,7 @@ function WJ_Validator(args,css_framework,log){
 					return true;
 				}
 			});
-			var success = _.filter(arguments,function(res,index){
+			var success = _.each(arguments,function(res,index){
 				if(_this.is_valid(res) && (!(_.contains(failed_ids,deferred_arr[index]["event"].target.id)))){
 					deferred_arr[index]["field_object"]["on_success"](deferred_arr[index]);
 				}
@@ -384,6 +384,7 @@ function WJ_Validator(args,css_framework,log){
 			}
 			else{
 				if(e){
+					console.log("triggering submit");
 					$(e.target).trigger("submit",{});
 				}
 			}
@@ -507,7 +508,13 @@ WJ_Validator.prototype = {
 		***/
 		_.each(Object.keys(_this.args),function(fo){
 			var defs = [];
-			$(document).on("submit ajax:before","#" + fo,function(e,ret){
+			//if the form has remote true, then bind only ajax:before
+			//otherwise bind only submit.
+			var event_name = "submit";
+			if($("#" + fo).attr("data-remote")){
+				event_name = "ajax:before";
+			}
+			$(document).on(event_name,"#" + fo,function(e,ret){
 				var results = {};
 				$(_.map(Object.keys(_this.args[fo]),function(k){
 					return "#" + k;
