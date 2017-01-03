@@ -1,6 +1,9 @@
 # WJ_Validator
 JQuery based form validation plugin. Easy to use and extend.
 
+## Caution !
+If using WJ_Validator with rails, you must use our <a href="https://github.com/wordjelly/jquery-rails-4.2.2.git0">jquery-rails gem as well</a>, since this has been modified to handle ajax form submissions and their interactions with this validator.
+
 ## Why Another Validator Plugin?
 There are several JQuery Validator plugins available online. Here are some things WJ-Validator offers out of the box:
   1. __Framework-specific__ : Inbuilt support for: 
