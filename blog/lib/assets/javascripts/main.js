@@ -365,6 +365,9 @@ function WJ_Validator(args,css_framework,log){
 			var failure_shown = false;
 			var failures = _.filter(arguments,function(res,index){
 				if(!_this.is_valid(res)){
+					console.log("res was invalid:");
+					
+					console.log(deferred_arr[index]);
 					if(!failure_shown){
 						deferred_arr[index]["field_object"]["on_failure"](	deferred_arr[index]);
 						failure_shown = true;
@@ -507,7 +510,7 @@ WJ_Validator.prototype = {
 		on submitting the form, trigger the custom event on each field of the form object.
 		***/
 		_.each(Object.keys(_this.args),function(fo){
-			var defs = [];
+			
 			//if the form has remote true, then bind only ajax:before
 			//otherwise bind only submit.
 			var event_name = "submit";
@@ -515,6 +518,7 @@ WJ_Validator.prototype = {
 				event_name = "ajax:before";
 			}
 			$(document).on(event_name,"#" + fo,function(e,ret){
+				var defs = [];
 				var results = {};
 				$(_.map(Object.keys(_this.args[fo]),function(k){
 					return "#" + k;

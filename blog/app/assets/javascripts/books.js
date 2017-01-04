@@ -23,11 +23,6 @@ $(document).on("ready",function(){
 					"keyup" : true
 				},
 				"validate_with":[
-					{
-					"remote":true,
-					"failure_message":"that book name is taken, choose another.",
-					"ajax_settings": ajax_settings
-					},
 					{"format" : "email",
 					"failure_message": "Please enter a valid email address"
 					}
