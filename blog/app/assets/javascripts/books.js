@@ -30,7 +30,7 @@ $(document).on("ready",function(){
 			},
 			"book_password":{
 				"validation_events":{
-					"focus":true,
+					"keyup":true,
 					"focusout":true
 				},
 				"validate_with":[{
