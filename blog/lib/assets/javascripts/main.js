@@ -362,17 +362,12 @@ function WJ_Validator(args,css_framework,log){
 		var ret_val = true;
 		$.when.apply($,deferred_arr).done(function(){
 			var failed_ids = [];
-			var failure_shown = false;
 			var failures = _.filter(arguments,function(res,index){
 				if(!_this.is_valid(res)){
-					console.log("res was invalid:");
-					
-					console.log(deferred_arr[index]);
-					if(!failure_shown){
+					if(!(_.contains(failed_ids,deferred_arr[index]["event"].target.id))){
 						deferred_arr[index]["field_object"]["on_failure"](	deferred_arr[index]);
-						failure_shown = true;
+						failed_ids.push(deferred_arr[index]["event"].target.id);
 					}
-					failed_ids.push(deferred_arr[index]["event"].target.id);
 					return true;
 				}
 			});
@@ -456,11 +451,12 @@ WJ_Validator.prototype = {
 					}
 				}
 
-				if(_.filter(field_obj["validate_with"],function(r){
-					return "field_array" in r;
-				}).length > 0){
-					two_binding_fields[f] = [field_obj["validate_with"][0]["field_array"],field_obj["validation_events"]];
-				}
+				
+				_.each(field_obj["validate_with"],function(r,i){
+					if("field_array" in r){
+						two_binding_fields[f] = [field_obj["validate_with"][i]["field_array"],field_obj["validation_events"]];
+					}
+				});
 
 
 			});
